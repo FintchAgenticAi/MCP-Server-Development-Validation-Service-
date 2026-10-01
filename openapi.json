@@ -1,0 +1,295 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Silver-Zone Validation Service",
+    "version": "1.0.0",
+    "description": "FastAPI-based validation service used by the MCP adapter."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8001",
+      "description": "Local development server"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "operationId": "health_check",
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "ok" },
+                    "timestamp": { "type": "string", "format": "date-time" }
+                  },
+                  "required": ["status"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/validation/rules": {
+      "get": {
+        "summary": "List all validation rules / checks",
+        "operationId": "list_validation_rules",
+        "responses": {
+          "200": {
+            "description": "Array of rule metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/RuleSummary" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/validation/rules/{rule_id}": {
+      "get": {
+        "summary": "Get a single rule definition",
+        "operationId": "get_validation_rule",
+        "parameters": [
+          {
+            "name": "rule_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Identifier of the validation rule"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Full rule definition",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RuleDetail" }
+              }
+            }
+          },
+          "404": {
+            "description": "Rule not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/validation/execute": {
+      "post": {
+        "summary": "Validate a single record",
+        "operationId": "validate_record",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ValidateRecordRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Validation result for the record",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidateRecordResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request / validation input error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/validation/batch": {
+      "post": {
+        "summary": "Validate a batch of records (optional)",
+        "operationId": "validate_batch",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/ValidateRecordRequest" }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Array of validation results, order matches request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/ValidateRecordResponse" }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Batch request malformed",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/validation/logs": {
+      "get": {
+        "summary": "List recent validation execution logs",
+        "operationId": "list_validation_logs",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "minimum": 1, "default": 20 },
+            "description": "Maximum number of log entries to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of log objects",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/LogEntry" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "RuleSummary": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "example": "email-format" },
+          "name": { "type": "string", "example": "Email format check" },
+          "description": { "type": "string" }
+        },
+        "required": ["id", "name"]
+      },
+      "RuleDetail": {
+        "type": "object",
+        "allOf": [
+          { "$ref": "#/components/schemas/RuleSummary" },
+          {
+            "type": "object",
+            "properties": {
+              "parameters": {
+                "type": "object",
+                "description": "Rule-specific configuration (any JSON object)",
+                "additionalProperties": true
+              },
+              "example_payload": {
+                "type": "object",
+                "description": "Sample payload that would pass/fail this rule"
+              }
+            }
+          }
+        ]
+      },
+      "ValidateRecordRequest": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Arbitrary JSON representing the record to validate"
+          },
+          "check_ids": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "List of rule IDs to apply (empty means all rules)"
+          }
+        },
+        "required": ["data"]
+      },
+      "ValidateRecordResponse": {
+        "type": "object",
+        "properties": {
+          "record_id": { "type": "string", "example": "abc-123" },
+          "passed": { "type": "boolean" },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "rule_id": { "type": "string" },
+                "message": { "type": "string" }
+              },
+              "required": ["rule_id", "message"]
+            }
+          }
+        },
+        "required": ["record_id", "passed"]
+      },
+      "LogEntry": {
+        "type": "object",
+        "properties": {
+          "timestamp": { "type": "string", "format": "date-time" },
+          "record_id": { "type": "string" },
+          "rule_ids": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "result": { "type": "string", "enum": ["passed", "failed"] },
+          "details": { "type": "object" }
+        },
+        "required": ["timestamp", "record_id", "result"]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" },
+          "message": { "type": "string" },
+          "detail": { "type": "object" }
+        },
+        "required": ["error", "message"]
+      }
+    },
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      },
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "security": [
+    { "ApiKeyAuth": [] },
+    { "BearerAuth": [] }
+  ]
+}

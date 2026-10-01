@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "validation-service": {
+      "command": "d:\\3rd year 1st sem\\industrial_project\\MCP server(Validation)\\venv\\Scripts\\python.exe",
+      "args": ["-m", "mcp_validation"],
+      "cwd": "d:\\3rd year 1st sem\\industrial_project\\MCP server(Validation)",
+      "env": {
+        "VALIDATION_API_BASE_URL": "http://127.0.0.1:8001"
+      }
+    }
+  }
+}
