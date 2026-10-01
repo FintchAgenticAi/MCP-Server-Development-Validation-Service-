@@ -1,0 +1,6 @@
+# Same constraint style as ai-financial-platform/requirements.txt.
+# Clean resolve in this venv: mcp==1.30.0 httpx==0.28.1 python-dotenv==1.0.0 pydantic==2.13.5
+mcp>=1.30.0,<2
+httpx>=0.27.0
+python-dotenv==1.0.0
+pydantic>=2.11.0,<3.0.0
